@@ -11,8 +11,8 @@ A comprehensive cloud-native data engineering pipeline monitoring French electri
 aws-france-energy-weather-pipeline/
 ├── 📁 scrapers/ # Data Collection
     ├── electricity_fetcher.py      # RTE Electricity Data Fetcher
-│   ├── electricity_executor.py                     # RTE Electricity execution
-│   ├── openmeteo_data.py           # Weather Data
+│   ├── electricity_executor.py     # RTE Electricity execution
+│   ├── openmeteo_fetcher.py           # Weather Data
 │   ├── holiday_fetcher.py          # Holiday Calendar
 │   └── french_region_city_data.py  # Regional Mapping
 ├── 📁 infrastructure/              # AWS Infrastructure
@@ -41,10 +41,10 @@ aws-france-energy-weather-pipeline/
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌──────────────────┐
 │   DATA SOURCES  │    │   DATA INGESTION │    │  DATA PROCESSING│    │   VISUALIZATION  │
 │                 │    │                  │    │                 │    │                  │
-│  ⚡ RTE France  │────│  🐍 Python      │────│  🪄 AWS Glue    │────│   📊 Tableau    │
-│  🌤️ OpenMeteo  │    │  Scrapers on EC2  │    │  ETL Pipelines  │    │   Dashboards     │
+│  ⚡ RTE France   │────│  🐍 Python       │────│  🪄 AWS Glue    │────│   📊 Tableau    │
+│  🌤️ OpenMeteo   │    │  Scrapers on EC2 │    │  ETL Pipelines  │    │   Dashboards     │
 │  🎉 Holidays API│    │                  │    │                 │    │                  │
-│  🗺️ Britannica  │    │  ⚙️ Lambda       │    │  🗂️ S3 Data    │    │  📈 Analytics   │
+│  🗺️ Britannica  │    │  ⚙️ Lambda       │    │  🗂️ S3 Data     │    │  📈 Analytics   │
 │                 │    │  Orchestration   │    │  Lake           │    │                  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘    └──────────────────┘
 ```
@@ -57,10 +57,10 @@ aws-france-energy-weather-pipeline/
 │  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐                     │
 │  │   SCHEDULING    │    │   COMPUTE LAYER  │    │   STORAGE LAYER │                     │
 │  │                 │    │                  │    │                 │                     │
-│  │  ⏰ CloudWatch │───▶│  λ Lambda        │───▶│  💼 S3 Bucket  │                     │
+│  │  ⏰ CloudWatch │───▶│  λ Lambda        │───▶│  💼 S3 Bucket    │                     │
 │  │    Events       │    │   Functions      │    │   ┌───────────┐ │                     │
 │  │                 │    │                  │    │   │  bronze/  │ │                     │
-│  │  📅 Cron:      │    │  🖥️ EC2 Instance │────│   │  silver/  │ │                     │
+│  │  📅 Cron:      │    │  🖥️ EC2 Instance │────│   │  silver/   │ │                     │
 │  │   - Hourly      │    │   with User Data │    │   │  gold/    │ │                     │
 │  │   - Monthly     │    │   Script         │    │   └───────────┘ │                     │
 │  └─────────────────┘    └──────────────────┘    └─────────────────┘                     │
@@ -69,7 +69,7 @@ aws-france-energy-weather-pipeline/
 │                          ┌─────────────────┐                                            │
 │                          │   DATA SOURCES  │                                            │
 │                          │                 │                                            │
-│                          │  ⚡ RTE France  │──────────┐                                 │
+│                          │  ⚡ RTE France  │──────────┐                                  │
 │                          │  🌤️ OpenMeteo  │──────────┐│                                 │
 │                          │  🎉 Holidays API│───────┐ ││                                 │
 │                          │  🗺️ Britannica  │─────┐ │ ││                                 │
@@ -78,7 +78,7 @@ aws-france-energy-weather-pipeline/
 │  ┌─────────────────┐    ┌──────────────────┐    ┌▼─▼─▼─▼┐      ┌─────────────────┐       │
 │  │   PROCESSING    │    │    ANALYTICS     │    │   ETL  │     │BUSINESS INTELL. │       │
 │  │                 │    │                  │    │        │     │                 │       │
-│  │  🪄 AWS Glue    │───▶│  🏢 Data       │───▶│  📊    │───▶│   📈 Tableau   │       │
+│  │  🪄 AWS Glue    │───▶│  🏢 Data        │───▶│  📊    │────▶│   📈 Tableau    │       │
 │  │   Jobs          │    │   Warehouse      │    │  BI    │     │   Dashboards    │       │
 │  │                 │    │                  │    │ Tools  │     │                 │       │
 │  │  🔄 Transform   │    │  📊 Aggregated  │    │        │     │  💡 Insights    │       │
@@ -126,7 +126,7 @@ aws-france-energy-weather-pipeline/
 ### Installation
 ```bash
 # Clone repository
-git clone https://github.com/your-username/aws-france-energy-weather-pipeline.git
+git clone https://github.com/your-username/aws-france-energy-weather-timeseries-pipeline.git
 cd aws-france-energy-weather-pipeline
 ```
 ### Complete EC2 Instance Setup
@@ -201,8 +201,8 @@ chromedriver --version
 ls -la /home/ec2-user/
 
 # Expected output:
-# -rw-r--r-- 1 ec2-user ec2-user   main.py
-# -rw-r--r-- 1 ec2-user ec2-user   openmeteo_data.py
+# -rw-r--r-- 1 ec2-user ec2-user   electricity_executor.py
+# -rw-r--r-- 1 ec2-user ec2-user   openmeteo_fetcher.py
 # -rw-r--r-- 1 ec2-user ec2-user   holiday_fetcher.py
 # -rw-r--r-- 1 ec2-user ec2-user   french_region_city_data.py
 # -rw-r--r-- 1 ec2-user ec2-user   requirements.txt
@@ -215,10 +215,10 @@ ls -la /home/ec2-user/
 source /home/ec2-user/venv/bin/activate
 
 # Test electricity scraper
-python3 /home/ec2-user/main.py
+python3 /home/ec2-user/electricity_executor.py
 
 # Test weather scraper
-python3 /home/ec2-user/openmeteo_data.py
+python3 /home/ec2-user/openmeteo_fetcher.py
 
 # Test holiday scraper
 python3 /home/ec2-user/holiday_fetcher.py
@@ -283,4 +283,5 @@ retry-requests>=1.0.0
 selenium>=4.8.0
 webdriver-manager>=3.8.0
 python-dateutil>=2.8.0
+urllib3<2.0  
 ```

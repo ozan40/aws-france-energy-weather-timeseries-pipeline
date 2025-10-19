@@ -11,7 +11,7 @@ A comprehensive cloud-native data engineering pipeline monitoring French electri
 aws-france-energy-weather-pipeline/
 ├── 📁 scrapers/ # Data Collection
     ├── electricity_fetcher.py      # RTE Electricity Data Fetcher
-│   ├── main.py                     # RTE Electricity execution
+│   ├── electricity_executor.py                     # RTE Electricity execution
 │   ├── openmeteo_data.py           # Weather Data
 │   ├── holiday_fetcher.py          # Holiday Calendar
 │   └── french_region_city_data.py  # Regional Mapping

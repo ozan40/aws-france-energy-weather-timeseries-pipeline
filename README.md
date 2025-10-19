@@ -90,12 +90,12 @@ aws-france-energy-weather-pipeline/
 ```
 ## 📊 Data Sources & Frequency
 
-| Data Source | Type | Frequency | Description |
-|-------------|------|-----------|-------------|
-| **RTE France** | Electricity | Hourly | French grid consumption/production data |
-| **OpenMeteo** | Weather | Hourly | Temperature history & forecasts |
-| **AbstractAPI** | Holidays | Monthly | French public holiday calendar |
-| **Britannica** | Regions | Monthly | French administrative divisions |
+| Data Source | Type | Frequency | Description                                       |
+|-------------|------|-----------|---------------------------------------------------|
+| **RTE France** | Electricity | Hourly | Real Time French grid consumption/production data |
+| **OpenMeteo** | Weather | Hourly | Real Time Temperature history & forecasts         |
+| **AbstractAPI** | Holidays | Monthly | French public holiday calendar                    |
+| **Britannica** | Regions | Monthly | French administrative divisions                   |
 
 ## 🛠️ Technology Stack
 

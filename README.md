@@ -1,2 +1,283 @@
-# aws-france-energy-weather-timeseries-pipeline
-Real-time monitoring of France's electricity grid with weather integration. Automated data collection, cloud ETL pipelines, and interactive dashboards for energy consumption analysis.
+# ⚡ AWS France Energy Weather Timeseries Pipeline
+
+[![AWS](https://img.shields.io/badge/AWS-Cloud-orange?logo=amazonaws)](https://aws.amazon.com)
+[![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)](https://python.org)
+[![Tableau](https://img.shields.io/badge/Tableau-Visualization-orange?logo=tableau)](https://tableau.com)
+
+A comprehensive cloud-native data engineering pipeline monitoring French electricity consumption correlated with weather patterns, holidays, and regional demographics. Built on AWS with full automation from data collection to business intelligence dashboards.
+
+## Project Setup
+aws-france-energy-weather-pipeline/
+├── 📁 scrapers/ # Data Collection
+    ├── electricity_fetcher.py      # RTE Electricity Data Fetcher
+│   ├── main.py                     # RTE Electricity execution
+│   ├── openmeteo_data.py           # Weather Data
+│   ├── holiday_fetcher.py          # Holiday Calendar
+│   └── french_region_city_data.py  # Regional Mapping
+├── 📁 infrastructure/              # AWS Infrastructure
+│   ├── lambda_ec2_orchestrator.py
+│   ├── user_data_script.sh
+│   └── cloudformation/             # IaC Templates
+├── 📁 etl/                         # Data Processing
+│   ├── glue_bronze_to_silver.py
+│   ├── glue_silver_to_gold.py
+│   └── data_validation/
+├── 📁 tableau/                     # Visualization
+│   ├── dashboards/
+│   └── data_sources/
+├── 📁 docs/                        # Documentation
+│   ├── architecture.md
+│   ├── setup_guide.md
+│   └── api_references.md
+└── 📁 tests/                       # Testing
+    ├── unit_tests/
+    └── integration_tests/
+
+## 🏗️ Architecture Overview
+
+### End-to-End Data Pipeline
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌──────────────────┐
+│   DATA SOURCES  │    │   DATA INGESTION │    │  DATA PROCESSING│    │   VISUALIZATION  │
+│                 │    │                  │    │                 │    │                  │
+│  ⚡ RTE France  │────│  🐍 Python      │────│  🪄 AWS Glue    │────│   📊 Tableau    │
+│  🌤️ OpenMeteo  │    │  Scrapers on EC2  │    │  ETL Pipelines  │    │   Dashboards     │
+│  🎉 Holidays API│    │                  │    │                 │    │                  │
+│  🗺️ Britannica  │    │  ⚙️ Lambda       │    │  🗂️ S3 Data    │    │  📈 Analytics   │
+│                 │    │  Orchestration   │    │  Lake           │    │                  │
+└─────────────────┘    └──────────────────┘    └─────────────────┘    └──────────────────┘
+
+### Detailed Technical Architecture
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                AWS CLOUD PLATFORM                                       │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                         │
+│  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐                     │
+│  │   SCHEDULING    │    │   COMPUTE LAYER  │    │   STORAGE LAYER │                     │
+│  │                 │    │                  │    │                 │                     │
+│  │  ⏰ CloudWatch │───▶│  λ Lambda        │───▶│  💼 S3 Bucket  │                     │
+│  │    Events       │    │   Functions      │    │   ┌───────────┐ │                     │
+│  │                 │    │                  │    │   │  bronze/  │ │                     │
+│  │  📅 Cron:      │    │  🖥️ EC2 Instance │────│   │  silver/  │ │                     │
+│  │   - Hourly      │    │   with User Data │    │   │  gold/    │ │                     │
+│  │   - Monthly     │    │   Script         │    │   └───────────┘ │                     │
+│  └─────────────────┘    └──────────────────┘    └─────────────────┘                     │
+│                                  │                                                      │
+│                                  ▼                                                      │
+│                          ┌─────────────────┐                                            │
+│                          │   DATA SOURCES  │                                            │
+│                          │                 │                                            │
+│                          │  ⚡ RTE France  │──────────┐                                 │
+│                          │  🌤️ OpenMeteo  │──────────┐│                                 │
+│                          │  🎉 Holidays API│───────┐ ││                                 │
+│                          │  🗺️ Britannica  │─────┐ │ ││                                 │
+│                          └─────────────────┘     │ │ │ │                                 │
+│                                                  │ │ │ │                                 │
+│  ┌─────────────────┐    ┌──────────────────┐    ┌▼─▼─▼─▼┐      ┌─────────────────┐       │
+│  │   PROCESSING    │    │    ANALYTICS     │    │   ETL  │     │BUSINESS INTELL. │       │
+│  │                 │    │                  │    │        │     │                 │       │
+│  │  🪄 AWS Glue    │───▶│  🏢 Data       │───▶│  📊    │───▶│   📈 Tableau   │       │
+│  │   Jobs          │    │   Warehouse      │    │  BI    │     │   Dashboards    │       │
+│  │                 │    │                  │    │ Tools  │     │                 │       │
+│  │  🔄 Transform   │    │  📊 Aggregated  │    │        │     │  💡 Insights    │       │
+│  │   Bronze→Silver │    │   Data Models    │    │        │     │                 │        │
+│  │   Silver→Gold   │    │                  │    │        │     │                 │        │
+│  └─────────────────┘    └──────────────────┘    └────────┘     └─────────────────┘        │
+│                                                                                           │
+└───────────────────────────────────────────────────────────────────────────────────────────┘
+
+## 📊 Data Sources & Frequency
+
+| Data Source | Type | Frequency | Description |
+|-------------|------|-----------|-------------|
+| **RTE France** | Electricity | Hourly | French grid consumption/production data |
+| **OpenMeteo** | Weather | Hourly | Temperature history & forecasts |
+| **AbstractAPI** | Holidays | Monthly | French public holiday calendar |
+| **Britannica** | Regions | Monthly | French administrative divisions |
+
+## 🛠️ Technology Stack
+
+### **Cloud Infrastructure (AWS)**
+- **Compute**: EC2, Lambda Functions
+- **Storage**: S3 (Data Lake)
+- **Orchestration**: CloudWatch Events, IAM Roles
+- **ETL**: AWS Glue, PySpark
+- **Analytics**: Data Warehouse (Redshift/Athena)
+
+### **Data Engineering**
+- **Languages**: Python 3.9+
+- **Libraries**: Pandas, Requests, BeautifulSoup, Boto3
+- **Data Formats**: Parquet, CSV
+- **Version Control**: Git, GitHub
+
+### **Business Intelligence**
+- **Visualization**: Tableau
+- **Dashboarding**: Interactive BI Reports
+
+## 🚀 Quick Start
+
+### Prerequisites
+- AWS Account with appropriate permissions
+- Python 3.9+ environment
+- Tableau Desktop/Server (for visualization)
+
+### Installation
+```bash
+# Clone repository
+git clone https://github.com/your-username/aws-france-energy-weather-pipeline.git
+cd aws-france-energy-weather-pipeline
+```
+### Complete EC2 Instance Setup
+#### Prerequisites
+- EC2 Instance running Amazon Linux 2023
+- Elastic IP: 18.159.25.178 attached
+- IAM Role with S3 access permissions
+
+#### Step 1: Transfer Files to EC2 Instance
+```bash
+# Copy Python scripts to EC2 instance
+scp -i your-key.pem *.py ec2-user@<YOUR PUBLIC IPv4>:/home/ec2-user/
+
+# Copy requirements.txt to EC2 instance
+scp -i your-key.pem requirements.txt ec2-user@<YOUR PUBLIC IPv4>:/home/ec2-user/
+
+# Copy any additional configuration files
+scp -i your-key.pem config.json ec2-user@<YOUR PUBLIC IPv4>:/home/ec2-user/
+```
+#### Step 2: SSH into EC2 Instance and Setup Environment
+```bash
+# Connect to your EC2 instance
+ssh -i your-key.pem ec2-user@<YOUR PUBLIC IPv4>
+```
+#### Step 3: Python Environment Setup
+```bash
+# Update system packages
+sudo yum update -y
+
+# Install Python and development tools
+sudo yum install -y python3 python3-pip python3-devel
+
+# Create virtual environment in ec2-user home directory
+python3 -m venv /home/ec2-user/venv
+
+# Activate virtual environment
+source /home/ec2-user/venv/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install required packages from requirements.txt
+pip install -r /home/ec2-user/requirements.txt
+
+# Verify installation
+pip list
+```
+
+#### Step 4: Install Additional System Dependencies
+```bash
+# Install Chrome and ChromeDriver for Selenium
+sudo yum install -y wget unzip
+
+# Download and install Chrome
+wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
+sudo yum install -y ./google-chrome-stable_current_x86_64.rpm
+
+# Install ChromeDriver
+wget https://storage.googleapis.com/chrome-for-testing-public/120.0.6099.109/linux64/chromedriver-linux64.zip
+unzip chromedriver-linux64.zip
+sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
+sudo chmod +x /usr/local/bin/chromedriver
+
+# Verify Chrome and ChromeDriver installation
+google-chrome --version
+chromedriver --version
+```
+
+#### Step 5: Verify File Structure
+```bash
+# Check all files are in place
+ls -la /home/ec2-user/
+
+# Expected output:
+# -rw-r--r-- 1 ec2-user ec2-user   main.py
+# -rw-r--r-- 1 ec2-user ec2-user   openmeteo_data.py
+# -rw-r--r-- 1 ec2-user ec2-user   holiday_fetcher.py
+# -rw-r--r-- 1 ec2-user ec2-user   french_region_city_data.py
+# -rw-r--r-- 1 ec2-user ec2-user   requirements.txt
+# drwxr-xr-x 5 ec2-user ec2-user   venv/
+```
+
+#### Step 6: Test individual Scrapers
+```bash
+# Activate virtual environment
+source /home/ec2-user/venv/bin/activate
+
+# Test electricity scraper
+python3 /home/ec2-user/main.py
+
+# Test weather scraper
+python3 /home/ec2-user/openmeteo_data.py
+
+# Test holiday scraper
+python3 /home/ec2-user/holiday_fetcher.py
+
+# Test region-city scraper
+python3 /home/ec2-user/french_region_city_data.py
+```
+#### Step 7: Setup User Data Script for Automatic Execution
+Create or update the User Data script in EC2 instance settings:
+```bash
+#!/bin/bash
+# Automated Scraper Execution Script
+
+# Wait for system to be fully ready
+sleep 45
+
+# Logging setup
+exec > >(tee -a /var/log/scraper.log) 2>&1
+
+echo "========================================="
+echo "$(date): Starting automated scraper execution"
+echo "========================================="
+
+# Switch to ec2-user and activate virtual environment
+sudo -u ec2-user -i << 'EOF'
+cd /home/ec2-user
+source venv/bin/activate
+
+echo "$(date): Virtual environment activated"
+
+# Run scrapers in sequence
+echo "$(date): Starting electricity scraper"
+python3 main.py
+
+echo "$(date): Starting weather scraper"
+python3 openmeteo_data.py
+
+echo "$(date): Starting holiday scraper"
+python3 holiday_fetcher.py
+
+echo "$(date): Starting region-city scraper"
+python3 french_region_city_data.py
+
+echo "$(date): All scrapers completed successfully"
+EOF
+
+# System shutdown
+echo "$(date): Initiating system shutdown"
+shutdown -h now
+```
+
+#### Step 8: Create requirements.txt (Local Development)
+```bash
+pandas>=1.5.0
+requests>=2.28.0
+beautifulsoup4>=4.11.0
+boto3>=1.26.0
+pyarrow>=10.0.0
+openmeteo-requests>=1.0.0
+requests-cache>=1.0.0
+retry-requests>=1.0.0
+selenium>=4.8.0
+webdriver-manager>=3.8.0
+python-dateutil>=2.8.0
+```

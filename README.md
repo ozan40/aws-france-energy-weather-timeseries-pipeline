@@ -137,6 +137,9 @@ cd aws-france-energy-weather-pipeline
 
 #### Step 1: Transfer Files to EC2 Instance
 ```bash
+# update your Host
+ssh-keygen -R "YOUR IPv4"
+
 # Copy Python scripts to EC2 instance
 scp -i your-key.pem *.py ec2-user@<YOUR PUBLIC IPv4>:/home/ec2-user/
 

@@ -480,8 +480,8 @@ def scrape_and_parse() -> pd.DataFrame:
     opts.add_argument("--dns-prefetch-disable")
     opts.add_argument("--disable-background-timer-throttling")
 
-    # ✅ EC2 ANPASSUNG 3: Manuelles ChromeDriver
-    driver = webdriver.Chrome(service=Service("/usr/local/bin/chromedriver"), options=opts)
+    # ✅ VERBESSERT: Verwende webdriver-manager für automatische Chromedriver-Verwaltung
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=opts)
     wait = WebDriverWait(driver, 25)
 
     try:

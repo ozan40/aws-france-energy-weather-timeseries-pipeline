@@ -231,13 +231,72 @@ python3 /home/ec2-user/french_region_city_data.py
 ```
 #### Step 7: Set up Systemd Service for Automated Data Fetching
 ##### Overview
-Configure a Systemd service to automatically run data scrapers when the EC2 instance starts and automatically shut down after completion.
+Configure a Systemd service with an intelligent scheduler that automatically runs data scrapers based on frequency requirements when the EC2 instance starts, and automatically shuts down after completion.
+
+##### Create the Smart Scheduler
+```bash
+# Create the scheduler script
+cat > /home/ec2-user/scheduler.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Smart scheduler that runs scrapers based on frequency requirements
+- Hourly scrapers: openmeteo_fetcher.py, electricity_executor.py
+- Monthly scrapers (1st of month): french_region_city_data.py, holiday_fetcher.py
+"""
+import subprocess
+import sys
+import os
+from datetime import datetime
+
+def run_scraper(script_name):
+    """Run a Python scraper script"""
+    try:
+        print(f"Running {script_name}...")
+        result = subprocess.run([sys.executable, script_name], 
+                              capture_output=True, text=True, cwd=os.getcwd())
+        if result.returncode == 0:
+            print(f"✓ {script_name} completed successfully")
+            return True
+        else:
+            print(f"✗ {script_name} failed: {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"✗ Error running {script_name}: {e}")
+        return False
+
+def main():
+    print("=== Starting Smart Scheduler ===")
+    
+    # Always run hourly scrapers
+    print("=== Executing Hourly Scrapers ===")
+    run_scraper("openmeteo_fetcher.py")
+    run_scraper("electricity_executor.py")
+    
+    # Run monthly scrapers only on 1st day of month
+    current_day = datetime.now().day
+    if current_day == 1:
+        print("=== First of Month - Executing Monthly Scrapers ===")
+        run_scraper("french_region_city_data.py")
+        run_scraper("holiday_fetcher.py")
+    else:
+        print(f"=== Skipping Monthly Scrapers (Day {current_day} of month) ===")
+    
+    print("=== All Scheduled Scrapers Completed ===")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+# Make scheduler executable
+chmod +x /home/ec2-user/scheduler.py
+```
+
 ##### Create Systemd Service File
 ```bash
 # Create Systemd service file
 sudo tee /etc/systemd/system/scraper.service > /dev/null << 'EOF'
 [Unit]
-Description=Data Engineering Scrapers
+Description=Data Engineering Scrapers with Smart Scheduler
 After=network.target
 
 [Service]
@@ -245,7 +304,7 @@ Type=oneshot
 User=ec2-user
 WorkingDirectory=/home/ec2-user
 ExecStartPre=/bin/sleep 30
-ExecStart=/bin/bash -c 'source venv/bin/activate && python3 openmeteo_fetcher.py && python3 electricity_executor.py && sudo shutdown -h now'
+ExecStart=/bin/bash -c 'source venv/bin/activate && python3 scheduler.py && sudo shutdown -h now'
 RemainAfterExit=yes
 
 [Install]
@@ -274,14 +333,18 @@ sudo systemctl status scraper.service
 ```
 
 ##### How it Works
-1. Automatic Startup: When the EC2 instance boots, the Systemd service automatically starts
-2. Execution Order:
-   - Waits 30 seconds for system stability
-   - Activates Python virtual environment
-   - Runs weather data scraper (openmeteo_fetcher.py)
-   - Runs electricity data scraper (electricity_executor.py)
-   - Executes automatic shutdown after completion
-3. Self-Contained: No external triggers needed - the service handles the entire workflow
+1. When the EC2 instance boots, the Systemd service automatically starts and executes the smart scheduler.
+2. Intelligent Execution Order:
+   - **Waits 30 seconds** for system stability
+   - **Activates Python virtual environment**
+   - **Runs smart scheduler** (`scheduler.py`) which determines which scrapers to execute:
+       - **Always executes**: Weather data scraper (`openmeteo_fetcher.py`) and Electricity data scraper (`electricity_executor.py`)
+       - **Conditionally executes** (1st day of month): Region/City data (`french_region_city_data.py`) and Holiday data (`holiday_fetcher.py`)
+   - **Executes automatic shutdown** after completion
+3. Self-Contained & Smart
+   - No external triggers needed - the service handles the entire workflow.
+   - Intelligent scheduling logic eliminates manual intervention.
+   - Easy to modify frequencies by updating the scheduler script.
 
 #### Step 8: Create requirements.txt (Local Development)
 ```bash

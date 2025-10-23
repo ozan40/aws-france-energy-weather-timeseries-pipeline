@@ -229,10 +229,12 @@ python3 /home/ec2-user/holiday_fetcher.py
 # Test region-city scraper
 python3 /home/ec2-user/french_region_city_data.py
 ```
-#### Step 7: Set up Systemd service to automatically fetch Data when Instance is started
-Create or update the User Data script in EC2 instance settings:
+#### Step 7: Set up Systemd Service for Automated Data Fetching
+##### Overview
+Configure a Systemd service to automatically run data scrapers when the EC2 instance starts and automatically shut down after completion.
+##### Create Systemd Service File
 ```bash
-# 1. Erstelle den Systemd Service mit sudo tee
+# Create Systemd service file
 sudo tee /etc/systemd/system/scraper.service > /dev/null << 'EOF'
 [Unit]
 Description=Data Engineering Scrapers
@@ -243,23 +245,43 @@ Type=oneshot
 User=ec2-user
 WorkingDirectory=/home/ec2-user
 ExecStartPre=/bin/sleep 30
-ExecStart=/bin/bash -c 'source venv/bin/activate && python3 openmeteo_fetcher.py && python3 electricity_executor.py'
-ExecStop=/bin/shutdown -h now
+ExecStart=/bin/bash -c 'source venv/bin/activate && python3 openmeteo_fetcher.py && python3 electricity_executor.py && sudo shutdown -h now'
 RemainAfterExit=yes
 
 [Install]
 WantedBy=multi-user.target
 EOF
+```
+##### Enable and Start the Service
+```bash
+# Reload systemd daemon
+sudo systemctl daemon-reload
 
-# 2. Aktiviere den Service
+# Enable service to start automatically on boot
 sudo systemctl enable scraper.service
 
-# 3. Starte den Service
+# Start the service immediately (optional - for testing)
 sudo systemctl start scraper.service
-
-# 4. Verfolge die Logs in Echtzeit
-sudo journalctl -u scraper.service -f
 ```
+
+##### Monitor Service Logs
+```bash
+# View real-time service logs
+sudo journalctl -u scraper.service -f
+
+# Check service status
+sudo systemctl status scraper.service
+```
+
+##### How it Works
+1. Automatic Startup: When the EC2 instance boots, the Systemd service automatically starts
+2. Execution Order:
+   - Waits 30 seconds for system stability
+   - Activates Python virtual environment
+   - Runs weather data scraper (openmeteo_fetcher.py)
+   - Runs electricity data scraper (electricity_executor.py)
+   - Executes automatic shutdown after completion
+3. Self-Contained: No external triggers needed - the service handles the entire workflow
 
 #### Step 8: Create requirements.txt (Local Development)
 ```bash

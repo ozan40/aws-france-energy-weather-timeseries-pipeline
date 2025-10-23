@@ -41,10 +41,10 @@ aws-france-energy-weather-pipeline/
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌──────────────────┐
 │   DATA SOURCES  │    │   DATA INGESTION │    │  DATA PROCESSING│    │   VISUALIZATION  │
 │                 │    │                  │    │                 │    │                  │
-│  ⚡ RTE France   │────│  🐍 Python       │────│  🪄 AWS Glue    │────│   📊 Tableau    │
+│  ⚡ RTE France  │────│  🐍 Python     │────│  🪄 AWS Glue  │────│   📊 Tableau  │
 │  🌤️ OpenMeteo   │    │  Scrapers on EC2 │    │  ETL Pipelines  │    │   Dashboards     │
 │  🎉 Holidays API│    │                  │    │                 │    │                  │
-│  🗺️ Britannica  │    │  ⚙️ Lambda       │    │  🗂️ S3 Data     │    │  📈 Analytics   │
+│  🗺️ Britannica  │    │  ⚙️ Lambda      │    │  🗂️ S3 Data    │    │  📈 Analytics  │
 │                 │    │  Orchestration   │    │  Lake           │    │                  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘    └──────────────────┘
 ```
@@ -57,10 +57,10 @@ aws-france-energy-weather-pipeline/
 │  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐                     │
 │  │   SCHEDULING    │    │   COMPUTE LAYER  │    │   STORAGE LAYER │                     │
 │  │                 │    │                  │    │                 │                     │
-│  │  ⏰ CloudWatch │───▶│  λ Lambda        │───▶│  💼 S3 Bucket    │                     │
+│  │  ⏰ CloudWatch │───▶│  λ Lambda        │───▶│  💼 S3 Bucket    │                   │
 │  │    Events       │    │   Functions      │    │   ┌───────────┐ │                     │
 │  │                 │    │                  │    │   │  bronze/  │ │                     │
-│  │  📅 Cron:      │    │  🖥️ EC2 Instance │────│   │  silver/   │ │                     │
+│  │  📅 Cron:      │    │  🖥️ EC2 Instance │────│   │  silver/   │ │                    │
 │  │   - Hourly      │    │   with User Data │    │   │  gold/    │ │                     │
 │  │   - Monthly     │    │   Script         │    │   └───────────┘ │                     │
 │  └─────────────────┘    └──────────────────┘    └─────────────────┘                     │
@@ -69,7 +69,7 @@ aws-france-energy-weather-pipeline/
 │                          ┌─────────────────┐                                            │
 │                          │   DATA SOURCES  │                                            │
 │                          │                 │                                            │
-│                          │  ⚡ RTE France  │──────────┐                                  │
+│                          │  ⚡ RTE France  │──────────┐                                 │
 │                          │  🌤️ OpenMeteo  │──────────┐│                                 │
 │                          │  🎉 Holidays API│───────┐ ││                                 │
 │                          │  🗺️ Britannica  │─────┐ │ ││                                 │
@@ -78,7 +78,7 @@ aws-france-energy-weather-pipeline/
 │  ┌─────────────────┐    ┌──────────────────┐    ┌▼─▼─▼─▼┐      ┌─────────────────┐       │
 │  │   PROCESSING    │    │    ANALYTICS     │    │   ETL  │     │BUSINESS INTELL. │       │
 │  │                 │    │                  │    │        │     │                 │       │
-│  │  🪄 AWS Glue    │───▶│  🏢 Data        │───▶│  📊    │────▶│   📈 Tableau    │       │
+│  │  🪄 AWS Glue    │───▶│  🏢 Data        │───▶│  📊  │────▶│   📈 Tableau   │       │
 │  │   Jobs          │    │   Warehouse      │    │  BI    │     │   Dashboards    │       │
 │  │                 │    │                  │    │ Tools  │     │                 │       │
 │  │  🔄 Transform   │    │  📊 Aggregated  │    │        │     │  💡 Insights    │       │
@@ -229,48 +229,36 @@ python3 /home/ec2-user/holiday_fetcher.py
 # Test region-city scraper
 python3 /home/ec2-user/french_region_city_data.py
 ```
-#### Step 7: Setup User Data Script for Automatic Execution
+#### Step 7: Set up Systemd service to automatically fetch Data when Instance is started
 Create or update the User Data script in EC2 instance settings:
 ```bash
-#!/bin/bash
-# Automated Scraper Execution Script
+# 1. Erstelle den Systemd Service mit sudo tee
+sudo tee /etc/systemd/system/scraper.service > /dev/null << 'EOF'
+[Unit]
+Description=Data Engineering Scrapers
+After=network.target
 
-# Wait for system to be fully ready
-sleep 45
+[Service]
+Type=oneshot
+User=ec2-user
+WorkingDirectory=/home/ec2-user
+ExecStartPre=/bin/sleep 30
+ExecStart=/bin/bash -c 'source venv/bin/activate && python3 openmeteo_fetcher.py && python3 electricity_executor.py'
+ExecStop=/bin/shutdown -h now
+RemainAfterExit=yes
 
-# Logging setup
-exec > >(tee -a /var/log/scraper.log) 2>&1
-
-echo "========================================="
-echo "$(date): Starting automated scraper execution"
-echo "========================================="
-
-# Switch to ec2-user and activate virtual environment
-sudo -u ec2-user -i << 'EOF'
-cd /home/ec2-user
-source venv/bin/activate
-
-echo "$(date): Virtual environment activated"
-
-# Run scrapers in sequence
-echo "$(date): Starting electricity scraper"
-python3 main.py
-
-echo "$(date): Starting weather scraper"
-python3 openmeteo_data.py
-
-echo "$(date): Starting holiday scraper"
-python3 holiday_fetcher.py
-
-echo "$(date): Starting region-city scraper"
-python3 french_region_city_data.py
-
-echo "$(date): All scrapers completed successfully"
+[Install]
+WantedBy=multi-user.target
 EOF
 
-# System shutdown
-echo "$(date): Initiating system shutdown"
-shutdown -h now
+# 2. Aktiviere den Service
+sudo systemctl enable scraper.service
+
+# 3. Starte den Service
+sudo systemctl start scraper.service
+
+# 4. Verfolge die Logs in Echtzeit
+sudo journalctl -u scraper.service -f
 ```
 
 #### Step 8: Create requirements.txt (Local Development)

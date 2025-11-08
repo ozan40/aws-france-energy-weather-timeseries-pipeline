@@ -31,6 +31,17 @@ def lambda_handler(event, context):
         print(f"Instance Public IP: {current_public_ip}")
         print(f"Expected Elastic IP: {elastic_ip}")
 
+        # 4. Return immediately - Systemd will handle shutdown
+        return {
+            'statusCode': 200,
+            'body': json.dumps({
+                'message': 'EC2 instance started successfully - Systemd service will handle scraping and shutdown',
+                'instance_id': instance_id,
+                'elastic_ip': elastic_ip,
+                'note': 'Instance will automatically shutdown after scrapers complete'
+            })
+        }
+
     except Exception as e:
         print(f"Error in Lambda function: {str(e)}")
         return {

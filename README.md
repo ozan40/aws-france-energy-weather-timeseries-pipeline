@@ -41,10 +41,10 @@ aws-france-energy-weather-pipeline/
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌──────────────────┐
 │   DATA SOURCES  │    │   DATA INGESTION │    │  DATA PROCESSING│    │   VISUALIZATION  │
 │                 │    │                  │    │                 │    │                  │
-│  ⚡ RTE France   │────│  🐍 Python       │────│  🪄 AWS Glue    │────│   📊 Tableau    │
+│  ⚡ RTE France  │────│  🐍 Python     │────│  🪄 AWS Glue  │────│   📊 Tableau  │
 │  🌤️ OpenMeteo   │    │  Scrapers on EC2 │    │  ETL Pipelines  │    │   Dashboards     │
 │  🎉 Holidays API│    │                  │    │                 │    │                  │
-│  🗺️ Britannica  │    │  ⚙️ Lambda       │    │  🗂️ S3 Data     │    │  📈 Analytics   │
+│  🗺️ Britannica  │    │  ⚙️ Lambda      │    │  🗂️ S3 Data    │    │  📈 Analytics  │
 │                 │    │  Orchestration   │    │  Lake           │    │                  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘    └──────────────────┘
 ```
@@ -57,10 +57,10 @@ aws-france-energy-weather-pipeline/
 │  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐                     │
 │  │   SCHEDULING    │    │   COMPUTE LAYER  │    │   STORAGE LAYER │                     │
 │  │                 │    │                  │    │                 │                     │
-│  │  ⏰ CloudWatch │───▶│  λ Lambda        │───▶│  💼 S3 Bucket    │                     │
+│  │  ⏰ CloudWatch │───▶│  λ Lambda        │───▶│  💼 S3 Bucket    │                   │
 │  │    Events       │    │   Functions      │    │   ┌───────────┐ │                     │
 │  │                 │    │                  │    │   │  bronze/  │ │                     │
-│  │  📅 Cron:      │    │  🖥️ EC2 Instance │────│   │  silver/   │ │                     │
+│  │  📅 Cron:      │    │  🖥️ EC2 Instance │────│   │  silver/   │ │                    │
 │  │   - Hourly      │    │   with User Data │    │   │  gold/    │ │                     │
 │  │   - Monthly     │    │   Script         │    │   └───────────┘ │                     │
 │  └─────────────────┘    └──────────────────┘    └─────────────────┘                     │
@@ -69,7 +69,7 @@ aws-france-energy-weather-pipeline/
 │                          ┌─────────────────┐                                            │
 │                          │   DATA SOURCES  │                                            │
 │                          │                 │                                            │
-│                          │  ⚡ RTE France  │──────────┐                                  │
+│                          │  ⚡ RTE France  │──────────┐                                 │
 │                          │  🌤️ OpenMeteo  │──────────┐│                                 │
 │                          │  🎉 Holidays API│───────┐ ││                                 │
 │                          │  🗺️ Britannica  │─────┐ │ ││                                 │
@@ -78,7 +78,7 @@ aws-france-energy-weather-pipeline/
 │  ┌─────────────────┐    ┌──────────────────┐    ┌▼─▼─▼─▼┐      ┌─────────────────┐       │
 │  │   PROCESSING    │    │    ANALYTICS     │    │   ETL  │     │BUSINESS INTELL. │       │
 │  │                 │    │                  │    │        │     │                 │       │
-│  │  🪄 AWS Glue    │───▶│  🏢 Data        │───▶│  📊    │────▶│   📈 Tableau    │       │
+│  │  🪄 AWS Glue    │───▶│  🏢 Data        │───▶│  📊  │────▶│   📈 Tableau   │       │
 │  │   Jobs          │    │   Warehouse      │    │  BI    │     │   Dashboards    │       │
 │  │                 │    │                  │    │ Tools  │     │                 │       │
 │  │  🔄 Transform   │    │  📊 Aggregated  │    │        │     │  💡 Insights    │       │
@@ -229,49 +229,122 @@ python3 /home/ec2-user/holiday_fetcher.py
 # Test region-city scraper
 python3 /home/ec2-user/french_region_city_data.py
 ```
-#### Step 7: Setup User Data Script for Automatic Execution
-Create or update the User Data script in EC2 instance settings:
+#### Step 7: Set up Systemd Service for Automated Data Fetching
+##### Overview
+Configure a Systemd service with an intelligent scheduler that automatically runs data scrapers based on frequency requirements when the EC2 instance starts, and automatically shuts down after completion.
+
+##### Create the Smart Scheduler
 ```bash
-#!/bin/bash
-# Automated Scraper Execution Script
+# Create the scheduler script
+cat > /home/ec2-user/scheduler.py << 'EOF'
+#!/usr/bin/env python3
+"""
+Smart scheduler that runs scrapers based on frequency requirements
+- Hourly scrapers: openmeteo_fetcher.py, electricity_executor.py
+- Monthly scrapers (1st of month): french_region_city_data.py, holiday_fetcher.py
+"""
+import subprocess
+import sys
+import os
+from datetime import datetime
 
-# Wait for system to be fully ready
-sleep 45
+def run_scraper(script_name):
+    """Run a Python scraper script"""
+    try:
+        print(f"Running {script_name}...")
+        result = subprocess.run([sys.executable, script_name], 
+                              capture_output=True, text=True, cwd=os.getcwd())
+        if result.returncode == 0:
+            print(f"✓ {script_name} completed successfully")
+            return True
+        else:
+            print(f"✗ {script_name} failed: {result.stderr}")
+            return False
+    except Exception as e:
+        print(f"✗ Error running {script_name}: {e}")
+        return False
 
-# Logging setup
-exec > >(tee -a /var/log/scraper.log) 2>&1
+def main():
+    print("=== Starting Smart Scheduler ===")
+    
+    # Always run hourly scrapers
+    print("=== Executing Hourly Scrapers ===")
+    run_scraper("openmeteo_fetcher.py")
+    run_scraper("electricity_executor.py")
+    
+    # Run monthly scrapers only on 1st day of month
+    current_day = datetime.now().day
+    if current_day == 1:
+        print("=== First of Month - Executing Monthly Scrapers ===")
+        run_scraper("french_region_city_data.py")
+        run_scraper("holiday_fetcher.py")
+    else:
+        print(f"=== Skipping Monthly Scrapers (Day {current_day} of month) ===")
+    
+    print("=== All Scheduled Scrapers Completed ===")
 
-echo "========================================="
-echo "$(date): Starting automated scraper execution"
-echo "========================================="
-
-# Switch to ec2-user and activate virtual environment
-sudo -u ec2-user -i << 'EOF'
-cd /home/ec2-user
-source venv/bin/activate
-
-echo "$(date): Virtual environment activated"
-
-# Run scrapers in sequence
-echo "$(date): Starting electricity scraper"
-python3 main.py
-
-echo "$(date): Starting weather scraper"
-python3 openmeteo_data.py
-
-echo "$(date): Starting holiday scraper"
-python3 holiday_fetcher.py
-
-echo "$(date): Starting region-city scraper"
-python3 french_region_city_data.py
-
-echo "$(date): All scrapers completed successfully"
+if __name__ == "__main__":
+    main()
 EOF
 
-# System shutdown
-echo "$(date): Initiating system shutdown"
-shutdown -h now
+# Make scheduler executable
+chmod +x /home/ec2-user/scheduler.py
 ```
+
+##### Create Systemd Service File
+```bash
+# Create Systemd service file
+sudo tee /etc/systemd/system/scraper.service > /dev/null << 'EOF'
+[Unit]
+Description=Data Engineering Scrapers with Smart Scheduler
+After=network.target
+
+[Service]
+Type=oneshot
+User=ec2-user
+WorkingDirectory=/home/ec2-user
+ExecStartPre=/bin/sleep 30
+ExecStart=/bin/bash -c 'source venv/bin/activate && python3 scheduler.py && sudo shutdown -h now'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+##### Enable and Start the Service
+```bash
+# Reload systemd daemon
+sudo systemctl daemon-reload
+
+# Enable service to start automatically on boot
+sudo systemctl enable scraper.service
+
+# Start the service immediately (optional - for testing)
+sudo systemctl start scraper.service
+```
+
+##### Monitor Service Logs
+```bash
+# View real-time service logs
+sudo journalctl -u scraper.service -f
+
+# Check service status
+sudo systemctl status scraper.service
+```
+
+##### How it Works
+1. When the EC2 instance boots, the Systemd service automatically starts and executes the smart scheduler.
+2. Intelligent Execution Order:
+   - **Waits 30 seconds** for system stability
+   - **Activates Python virtual environment**
+   - **Runs smart scheduler** (`scheduler.py`) which determines which scrapers to execute:
+       - **Always executes**: Weather data scraper (`openmeteo_fetcher.py`) and Electricity data scraper (`electricity_executor.py`)
+       - **Conditionally executes** (1st day of month): Region/City data (`french_region_city_data.py`) and Holiday data (`holiday_fetcher.py`)
+   - **Executes automatic shutdown** after completion
+3. Self-Contained & Smart
+   - No external triggers needed - the service handles the entire workflow.
+   - Intelligent scheduling logic eliminates manual intervention.
+   - Easy to modify frequencies by updating the scheduler script.
 
 #### Step 8: Create requirements.txt (Local Development)
 ```bash

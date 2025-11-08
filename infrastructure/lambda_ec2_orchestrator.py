@@ -23,6 +23,14 @@ def lambda_handler(event, context):
         waiter_running.wait(InstanceIds = [instance_id])
         print("Instance is now running")
 
+        # 3. Verify Elastic IP
+        instances = ec2.describe_instances(InstanceIds = [instance_id])
+        instance = instances['Reservations'][0]['Instances'][0]
+        current_public_ip = instance.get('PublicIpAddress', 'N/A')
+
+        print(f"Instance Public IP: {current_public_ip}")
+        print(f"Expected Elastic IP: {elastic_ip}")
+
     except Exception as e:
         print(f"Error in Lambda function: {str(e)}")
         return {

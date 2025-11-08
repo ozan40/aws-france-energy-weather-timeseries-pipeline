@@ -17,6 +17,12 @@ def lambda_handler(event, context):
         start_response = ec2. start_instances(InstanceIds=[instance_id])
         print((f"Start response: {start_response}"))
 
+        # 2. Wait for instance to be running
+        print("Waiting for instance to reach running state...")
+        waiter_running = ec2.get_waiter('instance_running')
+        waiter_running.wait(InstanceIds = [instance_id])
+        print("Instance is now running")
+
     except Exception as e:
         print(f"Error in Lambda function: {str(e)}")
         return {

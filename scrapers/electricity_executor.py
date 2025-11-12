@@ -20,9 +20,9 @@ from electricity_fetcher import scrape_and_parse
 # -----------------------------
 # Configuration
 # -----------------------------
-S3_BUCKET = "data-engineering-project2-432801802552"
+S3_BUCKET = "data-engineering-project-8433-3658-8863"
 S3_PREFIX = "bronze_data/electricity_data"
-AWS_REGION = "eu-central-1"
+AWS_REGION = "us-east-1"
 
 
 # -----------------------------

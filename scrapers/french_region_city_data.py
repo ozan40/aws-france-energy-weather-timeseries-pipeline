@@ -14,8 +14,8 @@ import time
 URL = "https://www.britannica.com/topic/list-of-cities-and-towns-in-France-2039172"
 
 # S3 Configuration
-S3_BUCKET = "data-engineering-project2-432801802552"
-S3_BASE_PATH = "bronze_data/french_region_city_data"
+S3_BUCKET = "data-engineering-project-8433-3658-8863"
+S3_BASE_PATH = "bronze_data/region_data"
 
 
 # =========================

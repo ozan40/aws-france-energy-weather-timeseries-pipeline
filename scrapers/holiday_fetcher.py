@@ -16,8 +16,8 @@ API_KEY = "bdef29c5025e41409cedea3b20018d03"  # Replace with your real key
 BASE_URL = "https://holidays.abstractapi.com/v1/"
 
 # S3 Configuration
-S3_BUCKET = "data-engineering-project2-432801802552"
-S3_BASE_PATH = "bronze_data/calendar_data"
+S3_BUCKET = "data-engineering-project-8433-3658-8863"
+S3_BASE_PATH = "bronze_data/holiday_data"
 
 
 # =========================

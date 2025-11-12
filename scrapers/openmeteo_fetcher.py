@@ -16,7 +16,7 @@ from retry_requests import retry
 # Config / Outputs - EC2 & S3 Adapted
 # =========================
 # S3 Configuration
-S3_BUCKET = "data-engineering-project2-432801802552"
+S3_BUCKET = "data-engineering-project-8433-3658-8863"
 S3_BASE_PATH = "bronze_data/weather_data"
 
 # How many cities to fetch (set to None for all — can be many API calls)

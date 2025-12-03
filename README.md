@@ -2,7 +2,12 @@
 
 [![AWS](https://img.shields.io/badge/AWS-Cloud-orange?logo=amazonaws)](https://aws.amazon.com)
 [![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)](https://python.org)
-[![Tableau](https://img.shields.io/badge/Tableau-Visualization-orange?logo=tableau)](https://tableau.com)
+[![QuickSight](https://img.shields.io/badge/Amazon%20QuickSight-Visualization-orange?logo=amazonaws&logoColor=orange)](https://aws.amazon.com/quicksight/)
+[![SQL](https://img.shields.io/badge/SQL-Query_Language-blue?logo=postgresql&logoColor=white)](https://en.wikipedia.org/wiki/SQL)
+[![Parquet](https://img.shields.io/badge/Parquet-Columnar_Storage-50AB8C?logo=apacheparquet&logoColor=white)](https://parquet.apache.org)
+[![Glue](https://img.shields.io/badge/AWS%20Glue-ETL_Service-blue?logo=amazonaws)](https://aws.amazon.com/glue/)
+[![Lambda](https://img.shields.io/badge/AWS%20Lambda-Serverless-orange?logo=awslambda&logoColor=white)](https://aws.amazon.com/lambda/)
+[![S3](https://img.shields.io/badge/Amazon%20S3-Data_Lake-569A31?logo=amazons3&logoColor=white)](https://aws.amazon.com/s3/)
 
 A comprehensive cloud-native data engineering pipeline monitoring French electricity consumption correlated with weather patterns, holidays, and regional demographics. Built on AWS with full automation from data collection to business intelligence dashboards.
 
@@ -47,12 +52,43 @@ aws-france-energy-weather-timeseries-pipeline/
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐    ┌──────────────────┐
 │   DATA SOURCES  │    │   DATA INGESTION │    │  DATA PROCESSING│    │   VISUALIZATION  │
 │                 │    │                  │    │                 │    │                  │
-│   RTE France    │────│   Python         │────│   AWS Glue      │────│   Tableau        │
+│   RTE France    │────│   Python         │────│   AWS Glue      │────│   QuickSight     │
 │   OpenMeteo     │    │   Scrapers on EC2│    │   ETL Pipelines │    │   Dashboards     │
-│   Holidays API  │    │                  │    │                 │    │                  │
-│   Britannica    │    │   Lambda         │    │   S3 Data Lake  │    │   Analytics      │
+│   Holidays API  │    │                  │    │   SQL Files     │    │                  │
+│   Britannica    │    │   Lambda         │    │   in Gold Layer │    │   Analytics      │
 │                 │    │   Orchestration  │    │                 │    │                  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘    └──────────────────┘
+
+DATA SOURCES
+    │
+    ├── RTE France (Electricity, 15-min intervals)
+    ├── OpenMeteo (Weather, hourly)
+    ├── Holidays API (Public holidays)
+    └── Britannica (Region mapping)
+    │
+    ▼
+DATA INGESTION (EC2 Instance 1 + Lambda)
+    │
+    ▼
+S3 DATA LAKE
+    ├── bronze/ (raw data)
+    ├── silver/ (cleaned, transformed)
+    └── gold/ (dimensions, facts, forecasts, SQL views, ML outputs)
+    │
+    ▼
+AWS GLUE (ETL & Catalog)
+    │
+    ▼
+ADVANCED ANALYTICS (EC2 Instance 2)
+    ├── ML Model Training (Stacking: SARIMAX + XGBoost/MLP)
+    ├── Cross-validation (Expanding/Sliding Window)
+    └── Forecast Generation (Day-ahead/Intraday)
+    │
+    ▼
+ANALYTICS STACK
+    ├── Athena (Query engine on SQL views)
+    ├── QuickSight (Dashboards)
+    └── Gold Layer Updates (Advanced Analytics folder)
 ```
 ### Detailed Technical Architecture
 ```bash
@@ -67,9 +103,12 @@ aws-france-energy-weather-timeseries-pipeline/
 │  │   Events        │    │   Functions      │    │   ┌───────────┐ │                    │
 │  │                 │    │                  │    │   │  bronze/  │ │                    │
 │  │   Cron:         │    │   EC2 Instance   │────│   │  silver/  │ │                    │
-│  │    - Hourly     │    │   with Systemd   │    │   │  gold/    │ │                    │
-│  │    - Monthly    │    │   Script         │    │   └───────────┘ │                    │
-│  └─────────────────┘    └──────────────────┘    └─────────────────┘                    │
+│  │    - Daily      │    │   (Scraping)     │    │   │  gold/    │ │                    │
+│  │    - Weekly     │    │                  │    │   │  (incl.   │ │                    │
+│  │    - Monthly    │    │   EC2 Instance   │────│   │   SQL)    │ │                    │
+│  └─────────────────┘    │   (Advanced      │    │   └───────────┘ │                    │
+│                         │    Analytics)    │    │                 │                    │
+│                         └──────────────────┘    └─────────────────┘                    │
 │                                  │                                                     │
 │                                  ▼                                                     │
 │                          ┌─────────────────┐                                           │
@@ -84,12 +123,13 @@ aws-france-energy-weather-timeseries-pipeline/
 │  ┌─────────────────┐    ┌──────────────────┐    ┌────▼▼▼▼┐      ┌─────────────────┐    │
 │  │   PROCESSING    │    │    ANALYTICS     │    │   ETL   │     │BUSINESS INTELL. │    │
 │  │                 │    │                  │    │         │     │                 │    │
-│  │   AWS Glue      │──▶│   Data           │───▶│   BI    │───▶│   Quicksight    │    │
-│  │   Jobs          │    │   Warehouse      │    │   Tools │     │   Dashboards    │    │
-│  │                 │    │                  │    │         │     │                 │    │
-│  │   Transform     │    │   Aggregated     │    │         │     │   Insights      │    │
-│  │   Bronze→Silver │    │   Data Models    │    │         │     │                 │    │
-│  │   Silver→Gold   │    │                  │    │         │     │                 │    │
+│  │   AWS Glue      │──▶│   Data           │───▶│   SQL   │───▶│   QuickSight    │    │
+│  │   Jobs          │    │   Warehouse      │    │   Files │     │   Dashboards    │    │
+│  │                 │    │   (Athena)       │    │   Gold  │     │                 │    │
+│  │   Transform     │    │                  │    │   Layer │     │   Insights      │    │
+│  │   Bronze→Silver │    │   Aggregated     │    │         │     │                 │    │
+│  │   Silver→Gold   │    │   Data Models    │    │         │     │                 │    │
+│  │   + SQL Views   │    │                  │    │         │     │                 │    │
 │  └─────────────────┘    └──────────────────┘    └─────────┘     └─────────────────┘    │
 │                                                                                        │
 └────────────────────────────────────────────────────────────────────────────────────────┘

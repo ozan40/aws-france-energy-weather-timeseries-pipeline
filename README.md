@@ -16,7 +16,7 @@ aws-france-energy-weather-pipeline/
 │   ├── holiday_fetcher.py          # Holiday Calendar
 │   └── french_region_city_data.py  # Regional Mapping
 ├── 📁 infrastructure/              # AWS Infrastructure
-│   ├── lambda_ec2_orchestrator.py
+│   ├── data-engineering-project-ec2-instance-starter.py
 │   ├── user_data_script.sh
 │   └── cloudformation/             # IaC Templates
 ├── 📁 etl/                         # Data Processing
